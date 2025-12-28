@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Snake</title>
+<style>
+body{margin:0;background:black;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden;}
+canvas{background:#111;display:block;border:4px solid white;}
+.controls{margin-top:5px;display:flex;flex-direction:column;align-items:center;}
+button{width:120px;height:120px;margin:5px;font-size:40px;touch-action: manipulation;border-radius:20px;}
+.row{display:flex;}
+.scoreboard{color:white;font-size:24px;margin:5px;}
+</style>
+</head>
+<body>
+
+<div class="scoreboard">
+  Score: <span id="score">0</span> | Record: <span id="record">0</span>
+</div>
+
+<canvas id="game"></canvas>
+
+<div class="controls">
+  <div class="row"><button onclick="setDir('UP')">↑</button></div>
+  <div class="row">
+    <button onclick="setDir('LEFT')">←</button>
+    <button onclick="togglePause()">⏸/▶</button>
+    <button onclick="setDir('RIGHT')">→</button>
+  </div>
+  <div class="row"><button onclick="setDir('DOWN')">↓</button></div>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+// адаптація під екран
+canvas.width = Math.floor(window.innerWidth * 0.9);
+canvas.height = Math.floor(window.innerHeight * 0.6);
+
+const box = Math.floor(Math.min(canvas.width, canvas.height)/20);
+let snake = [{x: Math.floor(canvas.width/2/box)*box, y: Math.floor(canvas.height/2/box)*box}];
+let dir = "RIGHT";
+let paused = false;
+
+let food = { x: Math.floor(Math.random()*(canvas.width/box))*box,
+             y: Math.floor(Math.random()*(canvas.height/box))*box };
+
+let score = 0;
+let record = 0;
+
+// --- Звуки ---
+const stepSound = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="); // дуже короткий пік
+const coinSound = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="); // пізніше можна замінити на звук монетки
+
+function playStep(){ stepSound.currentTime=0; stepSound.play(); }
+function playCoin(){ coinSound.currentTime=0; coinSound.play(); }
+
+// --- Керування ---
+function setDir(newDir){
+  if(newDir==="UP" && dir!=="DOWN") dir="UP";
+  if(newDir==="DOWN" && dir!=="UP") dir="DOWN";
+  if(newDir==="LEFT" && dir!=="RIGHT") dir="LEFT";
+  if(newDir==="RIGHT" && dir!=="LEFT") dir="RIGHT";
+}
+
+function togglePause(){ paused=!paused; }
+
+function game(){
+  if(paused) return;
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // обведення границь
+  ctx.strokeStyle="white";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(0,0,canvas.width,canvas.height);
+
+  // їжа
+  ctx.fillStyle = "red";
+  ctx.fillRect(food.x,food.y,box,box);
+
+  // змійка
+  ctx.fillStyle = "lime";
+  snake.forEach((p,index)=>{
+    ctx.fillRect(p.x,p.y,box,box);
+    // очі на голові
+    if(index===0){
+      ctx.fillStyle="black";
+      let eyeSize = box/5;
+      let offsetX = dir=="LEFT"?box/4: dir=="RIGHT"?box*2/4: box/4;
+      let offsetY = dir=="UP"?box/4: dir=="DOWN"?box*2/4: box/4;
+      ctx.fillRect(p.x+offsetX,p.y+offsetY,eyeSize,eyeSize);
+      ctx.fillRect(p.x+box/2,p.y+offsetY,eyeSize,eyeSize);
+      ctx.fillStyle="lime";
+    }
+  });
+
+  let head = {...snake[0]};
+  if(dir=="UP") head.y -= box;
+  if(dir=="DOWN") head.y += box;
+  if(dir=="LEFT") head.x -= box;
+  if(dir=="RIGHT") head.x += box;
+
+  // рух — звук кроку
+  playStep();
+
+  // з’їла їжу
+  if(head.x===food.x && head.y===food.y){
+    food = { x: Math.floor(Math.random()*(canvas.width/box))*box,
+             y: Math.floor(Math.random()*(canvas.height/box))*box };
+    score++;
+    if(score>record) record=score;
+    document.getElementById("score").textContent = score;
+    document.getElementById("record").textContent = record;
+    playCoin(); // звук монетки
+  } else snake.pop();
+
+  // кінець гри
+  if(head.x<0||head.y<0||head.x>=canvas.width||head.y>=canvas.height||
+     snake.some(p=>p.x===head.x && p.y===head.y)){
+    alert("Game Over");
+    snake = [{x: Math.floor(canvas.width/2/box)*box, y: Math.floor(canvas.height/2/box)*box}];
+    dir="RIGHT";
+    score=0;
+    document.getElementById("score").textContent = score;
+    return;
+  }
+
+  snake.unshift(head);
+}
+
+// швидкість повільна
+setInterval(game,240);
+</script>
+
+</body>
+</html>
